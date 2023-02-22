@@ -84,10 +84,21 @@ def main(args: argparse.Namespace) -> Optional[tf.keras.Model]:
         # the model can perform any of:
         # - binary classification with 1 output and sigmoid activation;
         # - two-class classification with 2 outputs and softmax activation.
-        model = ...
+
+        # Create sequential model with one hidden layer of 32 units and ReLU activation
+        # and input layer of 4 units (observations.shape[1])
+        model = tf.keras.models.Sequential([
+            tf.keras.layers.Dense(32, activation='relu', input_shape=(observations.shape[1],)),
+            tf.keras.layers.Dense(1, activation='sigmoid')
+        ])
+
 
         # TODO: Prepare the model for training using the `model.compile` method.
-        model.compile(...)
+        model.compile(
+            optimizer=tf.keras.optimizers.Adam(),
+            loss=tf.keras.losses.BinaryCrossentropy(),
+            metrics=[tf.keras.metrics.BinaryAccuracy()],
+        )
 
         tb_callback = tf.keras.callbacks.TensorBoard(args.logdir, histogram_freq=1)
 
