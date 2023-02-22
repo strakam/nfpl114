@@ -69,7 +69,7 @@ class Model(tf.Module):
             # The tf.GradientTape is used to record all operations inside the with block.
             with tf.GradientTape() as tape:
                 # TODO: Compute the predicted probabilities of the batch images using `self.predict`
-                probabilities = ...
+                probabilities = self.predict(batch["images"])
 
                 # TODO: Manually compute the loss:
                 # - For every batch example, the loss is the categorical crossentropy of the
@@ -77,7 +77,8 @@ class Model(tf.Module):
                 #   - either use `tf.one_hot` to obtain one-hot encoded gold labels,
                 #   - or use `tf.gather` with `batch_dims=1` to "index" the predicted probabilities.
                 # - Finally, compute the average across the batch examples.
-                loss = ...
+                one_hotted = tf.one_hot(batch["labels"], MNIST.LABELS)
+                loss = tf.reduce_mean(tf.keras.losses.categorical_crossentropy(one_hotted, probabilities))
 
             # We create a list of all variables. Note that a `tf.Module` automatically
             # tracks owned variables, so we could also use `self.trainable_variables`
@@ -86,25 +87,25 @@ class Model(tf.Module):
 
             # TODO: Compute the gradient of the loss with respect to variables using
             # backpropagation algorithm via `tape.gradient`
-            gradients = ...
+            gradients = tape.gradient(loss, variables)
 
             for variable, gradient in zip(variables, gradients):
                 # TODO: Perform the SGD update with learning rate `self._args.learning_rate`
                 # for the variable and computed gradient. You can modify
                 # variable value with `variable.assign` or in this case the more
                 # efficient `variable.assign_sub`.
-                ...
+                variable.assign_sub(self._args.learning_rate * gradient)
 
     def evaluate(self, dataset: MNIST.Dataset) -> float:
         # Compute the accuracy of the model prediction
         correct = 0
         for batch in dataset.batches(self._args.batch_size):
             # TODO: Compute the probabilities of the batch images
-            probabilities = ...
-
+            probabilities = self.predict(batch["images"])
+            predictions = tf.argmax(probabilities, axis=1)
             # TODO: Evaluate how many batch examples were predicted
             # correctly and increase `correct` variable accordingly.
-            correct += ...
+            correct += np.sum(predictions == batch["labels"])
 
         return correct / dataset.size
 
@@ -136,15 +137,15 @@ def main(args: argparse.Namespace) -> Tuple[float, float]:
 
     for epoch in range(args.epochs):
         # TODO: Run the `train_epoch` with `mnist.train` dataset
-
+        model.train_epoch(mnist.train)
         # TODO: Evaluate the dev data using `evaluate` on `mnist.dev` dataset
-        accuracy = ...
+        accuracy = model.evaluate(mnist.dev)
         print("Dev accuracy after epoch {} is {:.2f}".format(epoch + 1, 100 * accuracy), flush=True)
         with writer.as_default(step=epoch + 1):
             tf.summary.scalar("dev/accuracy", 100 * accuracy)
 
     # TODO: Evaluate the test data using `evaluate` on `mnist.test` dataset
-    test_accuracy = ...
+    test_accuracy = model.evaluate(mnist.test)
     print("Test accuracy after epoch {} is {:.2f}".format(epoch + 1, 100 * test_accuracy), flush=True)
     with writer.as_default(step=epoch + 1):
         tf.summary.scalar("test/accuracy", 100 * test_accuracy)
