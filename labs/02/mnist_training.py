@@ -85,8 +85,39 @@ def main(args: argparse.Namespace) -> Dict[str, float]:
     #   should be close to `args.learning_rate_final` (not equal, because
     #   `model.optimizer.learning_rate` returns the last learning rate used during training).
 
+    steps = (mnist.train.size / args.batch_size) * args.epochs
+    if args.decay == 'linear':
+        decay = tf.keras.optimizers.schedules.PolynomialDecay(
+            args.learning_rate,
+            decay_steps=steps,
+            end_learning_rate=args.learning_rate_final,
+            power=1.0
+        )
+    elif args.decay == 'exponential':
+        decay = tf.keras.optimizers.schedules.ExponentialDecay(
+            args.learning_rate,
+            decay_steps=steps,
+            decay_rate=args.learning_rate_final / args.learning_rate
+        )
+    elif args.decay == 'cosine':
+        decay = tf.keras.optimizers.schedules.CosineDecay(
+            args.learning_rate,
+            decay_steps=steps,
+            alpha=args.learning_rate_final / args.learning_rate
+        )
+    else:
+        decay = args.learning_rate
+
+    if args.optimizer == "SGD":
+        if args.momentum is None:
+            optimizer = tf.keras.optimizers.SGD(learning_rate=decay)
+        else:
+            optimizer = tf.keras.optimizers.SGD(learning_rate=args.learning_rate, momentum=args.momentum, nesterov=True)
+    elif args.optimizer == "Adam":
+        optimizer = tf.keras.optimizers.Adam(learning_rate=decay)
+
     model.compile(
-        optimizer=...,
+        optimizer=optimizer,
         loss=tf.losses.SparseCategoricalCrossentropy(),
         metrics=[tf.metrics.SparseCategoricalAccuracy("accuracy")],
     )
@@ -99,6 +130,7 @@ def main(args: argparse.Namespace) -> Dict[str, float]:
         validation_data=(mnist.dev.data["images"], mnist.dev.data["labels"]),
         callbacks=[tb_callback],
     )
+
 
     # Return development metrics for ReCodEx to validate.
     return {metric: values[-1] for metric, values in logs.history.items() if metric.startswith("val_")}
