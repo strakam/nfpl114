@@ -58,10 +58,14 @@ def main(args: argparse.Namespace) -> Tuple[List[float], List[float]]:
         print("Done", file=sys.stderr)
 
     individual_accuracies, ensemble_accuracies = [], []
+    averaged_results = np.zeros((mnist.dev.data["images"].shape[0], MNIST.LABELS))
     for model in range(args.models):
         # TODO: Compute the accuracy on the dev set for the individual `models[model]`.
-        individual_accuracy = ...
-
+        _, individual_accuracy = models[model].evaluate(mnist.dev.data["images"], mnist.dev.data["labels"])
+        # take the predictions using argmax
+        predictions = models[model].predict(mnist.dev.data["images"])
+        # add the predictions to the averaged results
+        averaged_results += predictions
         # TODO: Compute the accuracy on the dev set for the ensemble `models[0:model+1]`.
         #
         # Generally you can choose one of the following approaches:
@@ -73,7 +77,8 @@ def main(args: argparse.Namespace) -> Tuple[List[float], List[float]]:
         #    need to construct Keras ensemble model at all, and instead call `model.predict`
         #    on the individual models and  average the results. To measure accuracy,
         #    either do it completely  manually or use `tf.metrics.SparseCategoricalAccuracy`.
-        ensemble_accuracy = ...
+        individual_accuracy = np.sum(np.argmax(predictions, axis=1) == mnist.dev.data["labels"]) / len(mnist.dev.data["labels"])
+        ensemble_accuracy = np.sum(np.argmax(averaged_results, axis=1) == mnist.dev.data["labels"]) / len(mnist.dev.data["labels"])
 
         # Store the accuracies
         individual_accuracies.append(individual_accuracy)
