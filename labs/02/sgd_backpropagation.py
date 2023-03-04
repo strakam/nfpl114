@@ -78,6 +78,8 @@ class Model(tf.Module):
                 #   - or use `tf.gather` with `batch_dims=1` to "index" the predicted probabilities.
                 # - Finally, compute the average across the batch examples.
                 one_hotted = tf.one_hot(batch["labels"], MNIST.LABELS)
+                cce = tf.keras.losses.CategoricalCrossentropy(one_hotted, probabilities)  
+                print(cce)
                 loss = tf.reduce_mean(tf.keras.losses.categorical_crossentropy(one_hotted, probabilities))
 
             # We create a list of all variables. Note that a `tf.Module` automatically
