@@ -52,8 +52,10 @@ def main(args: argparse.Namespace) -> Dict[str, float]:
 
     model = tf.keras.Sequential()
     model.add(tf.keras.layers.Flatten(input_shape=[MNIST.H, MNIST.W, MNIST.C]))
+    model.add(tf.keras.layers.Dropout(args.dropout))
     for hidden_layer in args.hidden_layers:
         model.add(tf.keras.layers.Dense(hidden_layer, activation=tf.nn.relu))
+        model.add(tf.keras.layers.Dropout(args.dropout))
     model.add(tf.keras.layers.Dense(MNIST.LABELS, activation=tf.nn.softmax))
 
     # TODO: Implement label smoothing with the given `args.label_smoothing` strength.
@@ -63,17 +65,22 @@ def main(args: argparse.Namespace) -> Dict[str, float]:
     # all gold labels (i.e., `mnist.{train,dev,test}.data["labels"]`) from indices
     # of the gold class to a full categorical distribution (you can use either NumPy,
     # or there is a helper method also in the `tf.keras.utils` module).
-
+    mnist.train.data["labels"] = tf.keras.utils.to_categorical(mnist.train.data["labels"], MNIST.LABELS)
+    mnist.dev.data["labels"] = tf.keras.utils.to_categorical(mnist.dev.data["labels"], MNIST.LABELS)
+    mnist.test.data["labels"] = tf.keras.utils.to_categorical(mnist.test.data["labels"], MNIST.LABELS)
+    
     # TODO: Create a `tf.optimizers.experimental.AdamW`, using the default learning
     # rate and a weight decay of strength `args.weight_decay`. Then call the
     # `exclude_from_weight_decay` method to specify that all variables with "bias"
     # in their name should not be decayed.
-    optimizer = ...
+    optimizer = tf.optimizers.experimental.AdamW(weight_decay=args.weight_decay)
+    optimizer.exclude_from_weight_decay(var_names=['bias'])
+
 
     model.compile(
         optimizer=optimizer,
-        loss=tf.losses.SparseCategoricalCrossentropy(),
-        metrics=[tf.metrics.SparseCategoricalAccuracy(name="accuracy")],
+        loss=tf.losses.CategoricalCrossentropy(label_smoothing=args.label_smoothing),
+        metrics=[tf.metrics.CategoricalAccuracy(name="accuracy")],
     )
 
     tb_callback = tf.keras.callbacks.TensorBoard(args.logdir, histogram_freq=1)
